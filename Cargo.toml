@@ -1,0 +1,9 @@
+workspace = { members = ["day-1", "day-2", "day-3", "day-4"] }
+[package]
+name = "aoc-2023"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
