@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::{fs::File, io::prelude::*, io::BufReader};
 
 #[derive(PartialEq)]
@@ -8,7 +9,7 @@ enum Direction {
     West,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Hash, Eq, Copy, Clone)]
 enum PipeType {
     I,
     Bar,
@@ -17,6 +18,7 @@ enum PipeType {
     F,
     Seven,
     S,
+    Ground,
 }
 
 struct Pipe {
@@ -75,6 +77,10 @@ impl Pipe {
                 pipe_type: PipeType::S,
                 directions: (Direction::North, Direction::West),
             },
+            '.' => Self {
+                pipe_type: PipeType::Ground,
+                directions: (Direction::North, Direction::North),
+            },
             _ => {
                 panic!("Error reading character!!")
             }
@@ -82,7 +88,7 @@ impl Pipe {
     }
 }
 
-pub fn pipe(file: File) -> (i32,) {
+pub fn pipe(file: File) -> (i32, i32) {
     let reader = BufReader::new(file);
     let mut chars: Vec<Vec<char>> = vec![];
     let mut s_position = (0, 0);
@@ -98,17 +104,62 @@ pub fn pipe(file: File) -> (i32,) {
         chars.push(row);
         row_count += 1;
     }
+    let mut points = HashMap::new();
     let pt1_total = next_pipe(
         Direction::South,
         s_position.0 - 1 as usize,
         s_position.1,
         &chars,
+        &mut points,
     );
-    return ((pt1_total + 1) / 2,);
+    let pt2 = count_contents(&points, &chars) - pt1_total - 1;
+    return ((pt1_total + 1) / 2, pt2);
 }
 
-fn next_pipe(coming_from: Direction, i: usize, j: usize, chars: &Vec<Vec<char>>) -> i32 {
+fn get_loop_total(s_position: (usize, usize), chars: &Vec<Vec<char>>, points: &mut HashMap<(usize, usize), PipeType>,) -> i32 {
+    if s_position.0 > 0 {
+        let above = Pipe::from(chars[s_position.0 - 1][s_position.1]);
+        if above.pipe_type != PipeType::Ground {
+            if above.directions.0 == Direction::South || above.directions.1 == Direction::South {
+                return next_pipe(
+                    Direction::South,
+                    s_position.0 - 1 as usize,
+                    s_position.1,
+                    &chars,
+                    points,
+                );;
+            }
+        }
+    }
+    if s_position.0 < chars.len() - 1 {
+        let below = Pipe::from(chars[s_position.0 + 1][s_position.1]);
+        if below.pipe_type != PipeType::Ground {
+            if below.directions.0 == Direction::North || below.directions.1 == Direction::North {
+                return 0;
+            }
+        }
+    }
+    if s_position.1 > 0 {
+        let left = Pipe::from(chars[s_position.0][s_position.1 - 1]);
+        if left.pipe_type != PipeType::Ground {
+            if left.directions.0 == Direction::East || left.directions.1 == Direction::East {
+                return 0;
+            }
+        }
+    }
+
+    return 0;
+}
+
+fn next_pipe(
+    coming_from: Direction,
+    i: usize,
+    j: usize,
+    chars: &Vec<Vec<char>>,
+    points: &mut HashMap<(usize, usize), PipeType>,
+) -> i32 {
     let pipe = Pipe::from(chars[i][j]);
+    points.insert((i, j), pipe.pipe_type);
     if pipe.pipe_type == PipeType::S {
         return 0;
     }
@@ -124,5 +175,33 @@ fn next_pipe(coming_from: Direction, i: usize, j: usize, chars: &Vec<Vec<char>>)
         ((i as i32) + offset.0) as usize,
         ((j as i32) + offset.1) as usize,
         chars,
+        points,
     );
+}
+
+fn count_contents(points: &HashMap<(usize, usize), PipeType>, chars: &Vec<Vec<char>>) -> i32 {
+    let mut in_bounds = false;
+    let mut pipe_count = 0;
+    for i in 0..chars.len() {
+        for j in 0..chars[i].len() {
+            if in_bounds {
+                pipe_count += 1;
+                if let Some(pipe) = points.get(&(i, j)) {
+                    match *pipe {
+                        PipeType::J | PipeType::Seven | PipeType::I | PipeType::S => {
+                            in_bounds = false;
+                        }
+                        _ => {}
+                    };
+                }
+            } else {
+                if let Some(_) = points.get(&(i, j)) {
+                    in_bounds = true;
+                    pipe_count += 1;
+                }
+            }
+        }
+    }
+
+    return pipe_count;
 }

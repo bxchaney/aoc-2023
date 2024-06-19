@@ -18,7 +18,8 @@ fn main() {
     let path = Path::new(filepath);
     let file = File::open(&path).expect("error opening file!");
 
-    let pt1 = pipes::pipe(file);
+    let (pt1, pt2) = pipes::pipe(file);
 
-    println!("pt1: {}", pt1.0);
+    println!("pt1: {}", pt1);
+    println!("pt2: {}", pt2);
 }
