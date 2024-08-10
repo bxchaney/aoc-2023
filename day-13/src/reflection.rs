@@ -11,7 +11,6 @@ impl Pattern {
     fn from(pattern: String) -> Self {
         let pattern_rows = pattern.split('\n').filter(|x| x != &"");
         let mut rows = vec![];
-        let mut cols = vec![];
 
         let mut temp: Vec<Vec<char>> = vec![];
 
@@ -28,9 +27,7 @@ impl Pattern {
             rows.push(Self::get_encoding(row.chars().collect()));
         }
 
-        for col_temp in temp {
-            cols.push(Self::get_encoding(col_temp));
-        }
+        let cols = temp.into_iter().map(|x| Self::get_encoding(x)).collect();
 
         return Self {
             rows,
@@ -40,12 +37,9 @@ impl Pattern {
     }
 
     fn get_encoding(chars: Vec<char>) -> u32 {
-        let mut num = 0;
-        for c in chars {
-            num <<= 1;
-            num += if c == '#' { 1 } else { 0 };
-        }
-        return num;
+        chars
+            .into_iter()
+            .fold(0, |acc, c| (acc << 1) + if c == '#' { 1 } else { 0 })
     }
 
     pub fn get_total(&self, comparator: &Box<dyn Fn(&u32, &u32) -> bool>) -> u32 {
